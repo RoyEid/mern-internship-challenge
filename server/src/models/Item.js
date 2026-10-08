@@ -15,6 +15,11 @@ const itemSchema = new mongoose.Schema(
         mobileNumber: {
             type: String,
             default: null
+        },
+        category: {
+            type: mongoose.Schema.Types.ObjectId,
+            ref: "Category",
+            required: true,
         }
     },
     {

@@ -2,6 +2,7 @@ import express from "express";
 import cors from "cors";
 
 import itemRoutes from "./routes/itemRoutes.js";
+import categoryRoutes from "./routes/categoryRoutes.js"
 
 const app = express();
 
@@ -13,5 +14,6 @@ app.get("/", (req, res) => {
 });
 
 app.use("/api/items", itemRoutes);
+app.use("/api/categories", categoryRoutes);
 
 export default app;

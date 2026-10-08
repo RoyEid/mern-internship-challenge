@@ -1,7 +1,7 @@
 import mongoose from "mongoose";
 
 export const validateCreateItem = (req, res, next) => {
-    const { name, description, mobileNumber } = req.body;
+    const { name, description, mobileNumber, category } = req.body;
 
     if (!name?.trim()) {
         return res.status(400).json({ message: "Name is required" })
@@ -10,7 +10,12 @@ export const validateCreateItem = (req, res, next) => {
     if (!description?.trim()) {
         return res.status(400).json({ message: "Description is required" })
     }
-
+    if (!category) {
+        return res.status(400).json({ message: "Category is required" })
+    }
+    if (!mongoose.isValidObjectId(category)) {
+        return res.status(400).json({ message: "Invalid category ID" })
+    }
     if (mobileNumber !== undefined && typeof mobileNumber !== "string") {
         return res.status(400).json({ message: "Mobile number must be a string" })
     }
@@ -18,7 +23,7 @@ export const validateCreateItem = (req, res, next) => {
 }
 
 export const validateUpdateItem = (req, res, next) => {
-    const { name, description, mobileNumber } = req.body;
+    const { name, description, mobileNumber, category } = req.body;
 
     if (name !== undefined && !name.trim()) {
         return res.status(400).json({ message: "Name cannot be empty" })
@@ -30,6 +35,9 @@ export const validateUpdateItem = (req, res, next) => {
 
     if (mobileNumber !== undefined && typeof mobileNumber !== "string") {
         return res.status(400).json({ message: "Mobile number must be a string" })
+    }
+    if (category !== undefined && !mongoose.isValidObjectId(category)) {
+        return res.status(400).json({ message: "Invalid category ID" })
     }
     next();
 }

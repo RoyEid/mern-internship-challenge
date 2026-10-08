@@ -1,6 +1,8 @@
 import { jest } from "@jest/globals";
 import request from "supertest";
+
 import Item from "../src/models/Item.js";
+import Category from "../src/models/Category.js";
 
 import {
     connectTestDatabase,
@@ -34,6 +36,12 @@ afterAll(async () => {
     await closeTestDatabase();
 });
 
+const createTestCategory = async () => {
+    return await Category.create({
+        name: "Electronics",
+    });
+};
+
 describe("Main API", () => {
     test("GET / should return API status", async () => {
         const response = await request(app).get("/");
@@ -60,11 +68,14 @@ describe("Main API", () => {
     });
 
     test("POST /api/items should create an item without a mobile number", async () => {
+        const category = await createTestCategory();
+
         const response = await request(app)
             .post("/api/items")
             .send({
                 name: "Laptop",
                 description: "Development laptop",
+                category: category._id.toString(),
             });
 
         expect(response.statusCode).toBe(201);
@@ -77,12 +88,18 @@ describe("Main API", () => {
 
         expect(response.body.mobileNumber).toBeNull();
 
+        expect(response.body.category.name).toBe(
+            "Electronics",
+        );
+
         expect(
             validatePhoneNumber,
         ).not.toHaveBeenCalled();
     });
 
     test("POST /api/items should validate and create an item with a mobile number", async () => {
+        const category = await createTestCategory();
+
         validatePhoneNumber.mockResolvedValue({
             countryCode: "LB",
             countryName: "Lebanon",
@@ -95,12 +112,17 @@ describe("Main API", () => {
                 name: "Phone",
                 description: "Test phone",
                 mobileNumber: "+96181987156",
+                category: category._id.toString(),
             });
 
         expect(response.statusCode).toBe(201);
 
         expect(response.body.mobileNumber).toBe(
             "+96181987156",
+        );
+
+        expect(response.body.category.name).toBe(
+            "Electronics",
         );
 
         expect(
@@ -111,6 +133,8 @@ describe("Main API", () => {
     });
 
     test("POST /api/items should reject an invalid mobile number", async () => {
+        const category = await createTestCategory();
+
         validatePhoneNumber.mockRejectedValue({
             response: {
                 status: 400,
@@ -123,6 +147,7 @@ describe("Main API", () => {
                 name: "Phone",
                 description: "Test phone",
                 mobileNumber: "123",
+                category: category._id.toString(),
             });
 
         expect(response.statusCode).toBe(400);
@@ -133,6 +158,8 @@ describe("Main API", () => {
     });
 
     test("POST /api/items should handle unavailable phone service", async () => {
+        const category = await createTestCategory();
+
         validatePhoneNumber.mockRejectedValue({
             response: {
                 status: 503,
@@ -145,24 +172,30 @@ describe("Main API", () => {
                 name: "Phone",
                 description: "Test phone",
                 mobileNumber: "+96181987156",
+                category: category._id.toString(),
             });
 
         expect(response.statusCode).toBe(503);
 
         expect(response.body).toEqual({
-            message: "Phone validation service is unavailable",
+            message:
+                "Phone validation service is unavailable",
         });
     });
 
     test("GET /api/items should return all items", async () => {
+        const category = await createTestCategory();
+
         await Item.create({
             name: "Laptop",
             description: "Development laptop",
+            category: category._id,
         });
 
         await Item.create({
             name: "Keyboard",
             description: "Mechanical keyboard",
+            category: category._id,
         });
 
         const response = await request(app)
@@ -171,12 +204,19 @@ describe("Main API", () => {
         expect(response.statusCode).toBe(200);
 
         expect(response.body).toHaveLength(2);
+
+        expect(response.body[0].category.name).toBe(
+            "Electronics",
+        );
     });
 
     test("PUT /api/items/:id should update an item", async () => {
+        const category = await createTestCategory();
+
         const item = await Item.create({
             name: "Laptop",
             description: "Old description",
+            category: category._id,
         });
 
         const response = await request(app)
@@ -194,6 +234,10 @@ describe("Main API", () => {
 
         expect(response.body.description).toBe(
             "Updated description",
+        );
+
+        expect(response.body.category.name).toBe(
+            "Electronics",
         );
     });
 
@@ -228,9 +272,12 @@ describe("Main API", () => {
     });
 
     test("DELETE /api/items/:id should delete an item", async () => {
+        const category = await createTestCategory();
+
         const item = await Item.create({
             name: "Laptop",
             description: "Development laptop",
+            category: category._id,
         });
 
         const response = await request(app)

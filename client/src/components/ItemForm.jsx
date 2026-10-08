@@ -1,9 +1,4 @@
-function ItemForm({
-  formData,
-  editingId,
-  onChange,
-  onSubmit,
-}) {
+function ItemForm({ formData, editingId, categories, onChange, onSubmit }) {
   return (
     <>
       <h2>{editingId ? "Edit Item" : "Add Item"}</h2>
@@ -38,9 +33,7 @@ function ItemForm({
         </div>
 
         <div>
-          <label htmlFor="mobileNumber">
-            Mobile Number
-          </label>
+          <label htmlFor="mobileNumber">Mobile Number</label>
 
           <input
             id="mobileNumber"
@@ -52,9 +45,27 @@ function ItemForm({
           />
         </div>
 
-        <button type="submit">
-          {editingId ? "Update Item" : "Add Item"}
-        </button>
+        <div>
+          <label htmlFor="category">Category</label>
+
+          <select
+            id="category"
+            name="category"
+            value={formData.category}
+            onChange={onChange}
+            required
+          >
+            <option value="">Select a category</option>
+
+            {categories.map((category) => (
+              <option key={category._id} value={category._id}>
+                {category.name}
+              </option>
+            ))}
+          </select>
+        </div>
+
+        <button type="submit">{editingId ? "Update Item" : "Add Item"}</button>
       </form>
     </>
   );

@@ -1,10 +1,28 @@
 import Item from "../models/Item.js";
-import { validatePhoneNumber } from "../services/phoneService.js";
+import Category from "../models/Category.js";
+
+import {
+    validatePhoneNumber,
+} from "../services/phoneService.js";
 
 export const createItem = async (req, res) => {
-    const { name, description, mobileNumber } = req.body;
+    const {
+        name,
+        description,
+        mobileNumber,
+        category,
+    } = req.body;
 
     try {
+        const categoryExists =
+            await Category.findById(category);
+
+        if (!categoryExists) {
+            return res.status(404).json({
+                message: "Category not found",
+            });
+        }
+
         if (mobileNumber) {
             await validatePhoneNumber(mobileNumber);
         }
@@ -13,7 +31,13 @@ export const createItem = async (req, res) => {
             name,
             description,
             mobileNumber: mobileNumber || null,
+            category,
         });
+
+        await item.populate(
+            "category",
+            "name",
+        );
 
         return res.status(201).json(item);
     } catch (error) {
@@ -25,7 +49,8 @@ export const createItem = async (req, res) => {
 
         if (error.response?.status === 503) {
             return res.status(503).json({
-                message: "Phone validation service is unavailable",
+                message:
+                    "Phone validation service is unavailable",
             });
         }
 
@@ -37,7 +62,8 @@ export const createItem = async (req, res) => {
 
 export const getItems = async (req, res) => {
     try {
-        const items = await Item.find();
+        const items = await Item.find()
+            .populate("category", "name");
 
         return res.status(200).json(items);
     } catch (error) {
@@ -49,7 +75,13 @@ export const getItems = async (req, res) => {
 
 export const updateItem = async (req, res) => {
     const { id } = req.params;
-    const { name, description, mobileNumber } = req.body;
+
+    const {
+        name,
+        description,
+        mobileNumber,
+        category,
+    } = req.body;
 
     try {
         const item = await Item.findById(id);
@@ -60,24 +92,49 @@ export const updateItem = async (req, res) => {
             });
         }
 
+        if (category !== undefined) {
+            const categoryExists =
+                await Category.findById(category);
+
+            if (!categoryExists) {
+                return res.status(404).json({
+                    message: "Category not found",
+                });
+            }
+
+            item.category = category;
+        }
+
         if (
             mobileNumber &&
             mobileNumber !== item.mobileNumber
         ) {
-            await validatePhoneNumber(mobileNumber);
+            await validatePhoneNumber(
+                mobileNumber,
+            );
         }
 
         item.name = name ?? item.name;
-        item.description = description ?? item.description;
+
+        item.description =
+            description ?? item.description;
 
         item.mobileNumber =
             mobileNumber !== undefined
                 ? mobileNumber || null
                 : item.mobileNumber;
 
-        const updatedItem = await item.save();
+        const updatedItem =
+            await item.save();
 
-        return res.status(200).json(updatedItem);
+        await updatedItem.populate(
+            "category",
+            "name",
+        );
+
+        return res
+            .status(200)
+            .json(updatedItem);
     } catch (error) {
         if (error.response?.status === 400) {
             return res.status(400).json({
@@ -87,7 +144,8 @@ export const updateItem = async (req, res) => {
 
         if (error.response?.status === 503) {
             return res.status(503).json({
-                message: "Phone validation service is unavailable",
+                message:
+                    "Phone validation service is unavailable",
             });
         }
 
@@ -97,11 +155,15 @@ export const updateItem = async (req, res) => {
     }
 };
 
-export const deleteItem = async (req, res) => {
+export const deleteItem = async (
+    req,
+    res,
+) => {
     const { id } = req.params;
 
     try {
-        const item = await Item.findByIdAndDelete(id);
+        const item =
+            await Item.findByIdAndDelete(id);
 
         if (!item) {
             return res.status(404).json({
@@ -110,7 +172,8 @@ export const deleteItem = async (req, res) => {
         }
 
         return res.status(200).json({
-            message: "Item deleted successfully",
+            message:
+                "Item deleted successfully",
         });
     } catch (error) {
         return res.status(500).json({
