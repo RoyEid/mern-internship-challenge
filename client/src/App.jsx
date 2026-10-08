@@ -1,9 +1,22 @@
 import { useEffect, useState } from "react";
-import axios from "axios";
+
+import ItemForm from "./components/ItemForm.jsx";
+import ItemList from "./components/ItemList.jsx";
+import StatusMessage from "./components/StatusMessage.jsx";
+
+import {
+  getItems,
+  createItem,
+  updateItem,
+  deleteItem,
+} from "./services/itemService.js";
 
 function App() {
   const [items, setItems] = useState([]);
   const [editingId, setEditingId] = useState(null);
+
+  const [error, setError] = useState("");
+  const [success, setSuccess] = useState("");
 
   const [formData, setFormData] = useState({
     name: "",
@@ -11,28 +24,22 @@ function App() {
     mobileNumber: "",
   });
 
-  const API_URL = import.meta.env.VITE_API_URL;
-
-  const handleDelete = async (id) => {
+  const fetchItems = async () => {
     try {
-      await axios.delete(`${API_URL}/api/items/${id}`);
-      setItems(items.filter((item) => item._id !== id));
-    } catch (error) {
-      console.error("Failed to delete item:", error);
-    }
-  };
+      const data = await getItems();
 
-  const getItems = async () => {
-    try {
-      const response = await axios.get(`${API_URL}/api/items`);
-      setItems(response.data);
+      setItems(data);
     } catch (error) {
-      console.error("Failed to get items:", error);
+      const message =
+        error.response?.data?.message ||
+        "Failed to load items";
+
+      setError(message);
     }
   };
 
   useEffect(() => {
-    getItems();
+    fetchItems();
   }, []);
 
   const handleChange = (event) => {
@@ -45,6 +52,9 @@ function App() {
   };
 
   const handleEdit = (item) => {
+    setError("");
+    setSuccess("");
+
     setEditingId(item._id);
 
     setFormData({
@@ -54,35 +64,73 @@ function App() {
     });
   };
 
+  const handleDelete = async (id) => {
+    setError("");
+    setSuccess("");
+
+    try {
+      await deleteItem(id);
+
+      setItems(
+        items.filter((item) => item._id !== id)
+      );
+
+      setSuccess("Item deleted successfully");
+    } catch (error) {
+      const message =
+        error.response?.data?.message ||
+        "Failed to delete item";
+
+      setError(message);
+    }
+  };
+
   const handleSubmit = async (event) => {
     event.preventDefault();
 
+    setError("");
+    setSuccess("");
+
     try {
       if (editingId) {
-        const response = await axios.put(
-          `${API_URL}/api/items/${editingId}`,
-          formData,
+        const updatedItem = await updateItem(
+          editingId,
+          formData
         );
 
         setItems(
-          items.map((item) => (item._id === editingId ? response.data : item)),
+          items.map((item) =>
+            item._id === editingId
+              ? updatedItem
+              : item
+          )
         );
 
         setEditingId(null);
+        setSuccess("Item updated successfully");
       } else {
-        const response = await axios.post(
-          `${API_URL}/api/items`,
-          formData,
-        );
-        setItems([...items, response.data]);
+        const newItem = await createItem(formData);
+
+        setItems([
+          ...items,
+          newItem
+        ]);
+
+        setSuccess("Item created successfully");
       }
+
       setFormData({
         name: "",
         description: "",
         mobileNumber: "",
       });
+
     } catch (error) {
-      console.error("Failed to save item:", error);
+      const message =
+        error.response?.data?.message ||
+        "Failed to save item";
+
+      setError(message);
     }
   };
 
@@ -90,53 +138,25 @@ function App() {
     <div>
       <h1>MERN Internship Challenge</h1>
 
-      <h2>Add Item</h2>
+      <StatusMessage
+        error={error}
+        success={success}
+      />
 
-      <form onSubmit={handleSubmit}>
-        <input
-          type="text"
-          name="name"
-          placeholder="Name"
-          value={formData.name}
-          onChange={handleChange}
-        />
-
-        <input
-          type="text"
-          name="description"
-          placeholder="Description"
-          value={formData.description}
-          onChange={handleChange}
-        />
-
-        <input
-          type="text"
-          name="mobileNumber"
-          placeholder="Mobile Number (optional)"
-          value={formData.mobileNumber}
-          onChange={handleChange}
-        />
-
-        <button type="submit">{editingId ? "Update Item" : "Add Item"}</button>
-      </form>
+      <ItemForm
+        formData={formData}
+        editingId={editingId}
+        onChange={handleChange}
+        onSubmit={handleSubmit}
+      />
 
       <h2>Items</h2>
 
-      {items.length === 0 ? (
-        <p>No items found.</p>
-      ) : (
-        <ul>
-          {items.map((item) => (
-            <li key={item._id}>
-              <strong>{item.name}</strong>
-              <p>{item.description}</p>
-              <p>{item.mobileNumber || "No mobile number"}</p>
-              <button onClick={() => handleEdit(item)}>Edit</button>
-              <button onClick={() => handleDelete(item._id)}>Delete</button>
-            </li>
-          ))}
-        </ul>
-      )}
+      <ItemList
+        items={items}
+        onEdit={handleEdit}
+        onDelete={handleDelete}
+      />
     </div>
   );
 }

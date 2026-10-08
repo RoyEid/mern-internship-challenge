@@ -5,7 +5,7 @@ import { validateCreateItem, validateUpdateItem, validateItemId } from "../valid
 const router = express.Router();
 
 router.post("/", validateCreateItem, createItem);
-router.get("/", validateItemId, getItems);
+router.get("/", getItems);
 router.put("/:id", validateItemId, validateUpdateItem, updateItem);
 router.delete("/:id", validateItemId, deleteItem);
 
