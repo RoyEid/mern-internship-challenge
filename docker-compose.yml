@@ -1,0 +1,63 @@
+services:
+  mongo:
+    image: mongo:8
+    volumes:
+      - mongo-data:/data/db
+
+    healthcheck:
+      test:
+        ["CMD", "mongosh", "--quiet", "--eval", "db.adminCommand('ping').ok"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+
+  phone-service:
+    build:
+      context: ./phone-service
+
+    image: mern-phone-service
+
+    env_file:
+      - ./phone-service/.env
+
+    ports:
+      - "5001:5001"
+
+  server:
+    build:
+      context: ./server
+
+    image: internship-server
+
+    environment:
+      PORT: "5000"
+      MONGODB_URI: "mongodb://mongo:27017/mern_internship_challenge"
+      PHONE_SERVICE_URL: "http://phone-service:5001"
+
+    ports:
+      - "5000:5000"
+
+    depends_on:
+      mongo:
+        condition: service_healthy
+
+      phone-service:
+        condition: service_started
+
+  client:
+    build:
+      context: ./client
+
+      args:
+        VITE_API_URL: http://localhost:5000
+
+    image: internship-client
+
+    ports:
+      - "5173:80"
+
+    depends_on:
+      - server
+
+volumes:
+  mongo-data:

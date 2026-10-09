@@ -1,0 +1,5 @@
+node_modules
+.env
+tests
+npm-debug.log
+pnpm-debug.log
